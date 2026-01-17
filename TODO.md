@@ -1,0 +1,3 @@
+- [ ] Add '/api/chat' route to backend/app.py
+- [ ] Implement message processing and response generation logic
+- [ ] Test the chat functionality
