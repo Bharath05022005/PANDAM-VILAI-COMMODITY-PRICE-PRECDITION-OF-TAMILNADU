@@ -6,6 +6,7 @@ const DiseaseDetection = () => {
     const [preview, setPreview] = useState(null);
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
@@ -13,6 +14,7 @@ const DiseaseDetection = () => {
             setSelectedFile(file);
             setPreview(URL.createObjectURL(file));
             setResult(null);
+            setError(null);
         }
     };
 
@@ -26,99 +28,124 @@ const DiseaseDetection = () => {
         formData.append('file', selectedFile);
 
         setLoading(true);
+        setError(null);
+
         try {
-            const response = await axios.post('http://127.0.0.1:5000/api/detect_disease', formData, {
+            // Connects to your Flask Backend
+            const response = await axios.post('http://localhost:5000/api/detect_disease', formData, {
                 headers: {
-                    'Content-Type': 'multipart/form-data'
-                }
+                    'Content-Type': 'multipart/form-data',
+                },
+                withCredentials: true // Important for session handling if needed
             });
+
             setResult(response.data);
-        } catch (error) {
-            console.error("Error detecting disease:", error);
-            alert("Failed to detect disease. Please try again.");
+        } catch (err) {
+            console.error("Error detecting disease:", err);
+            setError("Failed to analyze image. Check if backend is running.");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div id="disease" className="tab-content active" style={{display: 'block', padding: '20px'}}>
-            <div className="header-image-container" style={{ textAlign: 'center', marginBottom: '30px' }}>
-                <h1><i className="fas fa-microscope"></i> Plant Disease Detection</h1>
-                <p>Upload a clear photo of a plant leaf to detect diseases and get treatment advice.</p>
+        <div className="container" style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+                <h2 style={{ color: '#2d3748' }}>🌱Plant Disease Detection</h2>
+                <p style={{ color: '#718096' }}>Upload a leaf photo to get an instant diagnosis and treatment plan.</p>
             </div>
 
-            <div className="container" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                
-                {/* Upload Box */}
-                <div className="upload-box" style={{ 
-                    border: '2px dashed #059669', 
-                    padding: '40px', 
-                    borderRadius: '15px', 
-                    textAlign: 'center', 
-                    background: 'white',
-                    width: '100%',
-                    maxWidth: '500px',
-                    marginBottom: '20px'
-                }}>
-                    <input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={handleFileChange} 
-                        style={{ display: 'none' }} 
-                        id="file-upload"
-                    />
-                    <label htmlFor="file-upload" style={{ cursor: 'pointer', display: 'block' }}>
-                        {preview ? (
-                            <img src={preview} alt="Preview" style={{ maxWidth: '100%', maxHeight: '300px', borderRadius: '10px' }} />
-                        ) : (
-                            <div>
-                                <i className="fas fa-cloud-upload-alt" style={{ fontSize: '50px', color: '#059669', marginBottom: '10px' }}></i>
-                                <h3>Click to Upload Leaf Image</h3>
-                                <p style={{ color: '#666' }}>Supports JPG, PNG</p>
-                            </div>
-                        )}
-                    </label>
-                </div>
+            {/* Upload Area */}
+            <div style={{ 
+                border: '3px dashed #cbd5e0', 
+                borderRadius: '15px', 
+                padding: '40px', 
+                textAlign: 'center',
+                backgroundColor: '#f7fafc',
+                marginBottom: '20px'
+            }}>
+                <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={handleFileChange} 
+                    style={{ display: 'none' }} 
+                    id="leaf-upload"
+                />
+                <label htmlFor="leaf-upload" style={{ cursor: 'pointer', display: 'block' }}>
+                    {preview ? (
+                        <img 
+                            src={preview} 
+                            alt="Preview" 
+                            style={{ maxHeight: '300px', maxWidth: '100%', borderRadius: '10px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} 
+                        />
+                    ) : (
+                        <div>
+                            <i className="fas fa-cloud-upload-alt" style={{ fontSize: '48px', color: '#48bb78', marginBottom: '10px' }}></i>
+                            <h4 style={{ color: '#4a5568' }}>Click to Upload Image</h4>
+                            <p style={{ color: '#a0aec0' }}>Supports JPG, PNG</p>
+                        </div>
+                    )}
+                </label>
+            </div>
 
-                {/* Detect Button */}
+            {/* Action Button */}
+            <div style={{ textAlign: 'center' }}>
                 <button 
                     onClick={handleDetect} 
-                    className="tab-button blue" 
-                    disabled={loading}
-                    style={{ width: '200px', textAlign: 'center', justifyContent: 'center', fontSize: '18px' }}
+                    disabled={loading || !selectedFile}
+                    style={{
+                        padding: '12px 40px',
+                        fontSize: '18px',
+                        backgroundColor: loading ? '#cbd5e0' : '#48bb78',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '30px',
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        transition: 'background 0.3s'
+                    }}
                 >
                     {loading ? "Analyzing..." : "Detect Disease"}
                 </button>
-
-                {/* Results Section */}
-                {result && (
-                    <div className="result-card" style={{ 
-                        marginTop: '30px', 
-                        background: 'white', 
-                        padding: '30px', 
-                        borderRadius: '15px', 
-                        boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
-                        width: '100%',
-                        maxWidth: '600px',
-                        borderLeft: result.status === 'Healthy' ? '5px solid #059669' : '5px solid #dc3545'
-                    }}>
-                        <h2 style={{ color: result.status === 'Healthy' ? '#059669' : '#dc3545' }}>
-                            {result.status === 'Healthy' ? <i className="fas fa-check-circle"></i> : <i className="fas fa-exclamation-circle"></i>}
-                            {' '}{result.status}
-                        </h2>
-                        <hr />
-                        <div style={{ textAlign: 'left', marginTop: '15px' }}>
-                            <p><strong>Predicted Disease:</strong> {result.disease}</p>
-                            <p><strong>Confidence:</strong> {result.confidence}</p>
-                            <div style={{ background: '#f8f9fa', padding: '15px', borderRadius: '8px', marginTop: '15px' }}>
-                                <strong><i className="fas fa-user-md"></i> Advice:</strong>
-                                <p style={{ margin: '5px 0 0 0' }}>{result.advice}</p>
-                            </div>
-                        </div>
-                    </div>
-                )}
             </div>
+
+            {/* Error Message */}
+            {error && (
+                <div style={{ marginTop: '20px', padding: '15px', backgroundColor: '#fff5f5', color: '#c53030', borderRadius: '8px', textAlign: 'center' }}>
+                    {error}
+                </div>
+            )}
+
+            {/* Results Display */}
+            {result && (
+                <div style={{ 
+                    marginTop: '30px', 
+                    padding: '25px', 
+                    borderRadius: '12px', 
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                    backgroundColor: 'white',
+                    borderLeft: result.status === 'Healthy' ? '6px solid #48bb78' : '6px solid #e53e3e'
+                }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+                        <h3 style={{ margin: 0, color: result.status === 'Healthy' ? '#2f855a' : '#c53030' }}>
+                            {result.status}
+                        </h3>
+                        <span style={{ backgroundColor: '#edf2f7', padding: '5px 12px', borderRadius: '20px', fontSize: '0.9em', fontWeight: 'bold', color: '#4a5568' }}>
+                            Confidence: {result.confidence}
+                        </span>
+                    </div>
+
+                    <h4 style={{ color: '#2d3748', borderBottom: '1px solid #e2e8f0', paddingBottom: '10px' }}>
+                        Identified: {result.disease}
+                    </h4>
+
+                    <div style={{ marginTop: '15px', backgroundColor: '#ebf8ff', padding: '15px', borderRadius: '8px' }}>
+                        <strong style={{ color: '#2b6cb0', display: 'block', marginBottom: '5px' }}>
+                            <i className="fas fa-user-md"></i> Expert Advice:
+                        </strong>
+                        <p style={{ margin: 0, color: '#2c5282' }}>{result.advice}</p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
