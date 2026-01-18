@@ -4,140 +4,167 @@ import axios from 'axios';
 const ChatAssistant = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState([
-        { sender: 'bot', text: 'Hi! I am the AI Chart Assistant. Ask me about price trends, highest prices, or commodity stats!' }
+        { sender: 'bot', text: 'Hi! I am your AI Agent. Ask me anything!' }
     ]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const messagesEndRef = useRef(null);
 
+    // Auto-scroll to bottom
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
     };
 
-    useEffect(scrollToBottom, [messages]);
+    useEffect(scrollToBottom, [messages, loading]);
 
     const handleSend = async () => {
         if (!input.trim()) return;
 
+        // 1. Create User Message
         const userMsg = { sender: 'user', text: input };
-        setMessages(prev => [...prev, userMsg]);
+        const newHistory = [...messages, userMsg];
+        
+        // 2. Update UI
+        setMessages(newHistory);
         setInput('');
         setLoading(true);
 
         try {
-            const res = await axios.post('http://127.0.0.1:5000/api/chat', { message: userMsg.text });
+            // 3. Send to Backend
+            const res = await axios.post('http://127.0.0.1:5000/api/chat', { 
+                message: userMsg.text,
+                history: newHistory.map(m => ({ role: m.sender, content: m.text })) 
+            });
+
             const botMsg = { sender: 'bot', text: res.data.reply };
             setMessages(prev => [...prev, botMsg]);
         } catch (error) {
-            setMessages(prev => [...prev, { sender: 'bot', text: "Sorry, I couldn't reach the server." }]);
+            console.error("API Error:", error);
+            setMessages(prev => [...prev, { sender: 'bot', text: "Sorry, I'm having trouble connecting." }]);
         } finally {
             setLoading(false);
         }
     };
 
+    // Handle 'Enter' key
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') handleSend();
+    };
+
     return (
-        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000 }}>
-            {/* Chat Window */}
+        <div style={{ position: 'fixed', bottom: '20px', right: '20px', zIndex: 1000, fontFamily: 'Arial, sans-serif' }}>
+            
+            {/* --- CHAT WINDOW --- */}
             {isOpen && (
                 <div style={{
                     width: '350px',
-                    height: '450px',
+                    height: '500px',
                     backgroundColor: 'white',
-                    borderRadius: '15px',
-                    boxShadow: '0 5px 25px rgba(0,0,0,0.2)',
+                    borderRadius: '12px',
+                    boxShadow: '0 8px 30px rgba(0,0,0,0.15)',
                     display: 'flex',
                     flexDirection: 'column',
                     overflow: 'hidden',
                     marginBottom: '15px',
-                    border: '1px solid #ddd'
+                    border: '1px solid #e5e7eb'
                 }}>
-                    {/* Header with Logo */}
-                    <div style={{ background: '#059669', color: 'white', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                            {/* Header Logo */}
-                            <img 
-                                src="/static/content/ai_logo.png" 
-                                alt="AI" 
-                                style={{ width: '30px', height: '30px', borderRadius: '50%', marginRight: '10px', background: 'white' }}
-                                onError={(e) => {e.target.style.display='none'}} // Hide if missing
-                            />
-                            <h4 style={{ margin: 0, fontSize: '16px' }}>Chart Assistant</h4>
+                    {/* Header */}
+                    <div style={{ background: '#2563EB', color: 'white', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            
+                            {/* 1. HEADER LOGO */}
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', overflow: 'hidden', background: 'white', border: '1px solid white' }}>
+                                <img 
+                                    src="/static/content/ai_logo.jpg" 
+                                    alt="AI"
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                    onError={(e) => {
+                                        e.target.style.display='none'; 
+                                        e.target.parentNode.innerHTML = '🤖'; // Fallback icon
+                                        e.target.parentNode.style.display = 'flex';
+                                        e.target.parentNode.style.alignItems = 'center';
+                                        e.target.parentNode.style.justifyContent = 'center';
+                                        e.target.parentNode.style.fontSize = '20px';
+                                        e.target.parentNode.style.color = '#2563EB';
+                                    }}
+                                />
+                            </div>
+
+                            <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>AI Agent</h4>
                         </div>
-                        <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '18px' }}>×</button>
+                        <button onClick={() => setIsOpen(false)} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer', fontSize: '24px', lineHeight: '1' }}>×</button>
                     </div>
 
-                    {/* Messages Area */}
-                    <div style={{ flex: 1, padding: '15px', overflowY: 'auto', background: '#f9f9f9' }}>
+                    {/* Messages */}
+                    <div style={{ flex: 1, padding: '15px', overflowY: 'auto', background: '#f3f4f6' }}>
                         {messages.map((msg, idx) => (
-                            <div key={idx} style={{ 
-                                textAlign: msg.sender === 'user' ? 'right' : 'left', 
-                                marginBottom: '10px' 
-                            }}>
-                                <span style={{
-                                    display: 'inline-block',
-                                    padding: '10px 15px',
-                                    borderRadius: '15px',
-                                    background: msg.sender === 'user' ? '#059669' : '#e0e0e0',
-                                    color: msg.sender === 'user' ? 'white' : 'black',
-                                    maxWidth: '80%',
+                            <div key={idx} style={{ display: 'flex', justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start', marginBottom: '12px' }}>
+                                <div style={{
+                                    padding: '12px 16px',
+                                    borderRadius: '12px',
+                                    background: msg.sender === 'user' ? '#2563EB' : 'white',
+                                    color: msg.sender === 'user' ? 'white' : '#1f2937',
+                                    border: msg.sender === 'bot' ? '1px solid #e5e7eb' : 'none',
+                                    maxWidth: '85%',
                                     fontSize: '14px',
-                                    boxShadow: '0 2px 5px rgba(0,0,0,0.05)'
+                                    lineHeight: '1.5',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                    whiteSpace: 'pre-wrap', 
+                                    wordBreak: 'break-word'
                                 }}>
                                     {msg.text}
-                                </span>
+                                </div>
                             </div>
                         ))}
-                        {loading && <div style={{ textAlign: 'left', color: '#888', fontStyle: 'italic', fontSize: '12px' }}>Thinking...</div>}
+                        {loading && <div style={{ marginLeft: '10px', fontSize: '12px', color: '#6b7280', fontStyle: 'italic' }}>AI is thinking...</div>}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    {/* Input Area */}
-                    <div style={{ padding: '10px', background: 'white', borderTop: '1px solid #eee', display: 'flex' }}>
+                    {/* Input */}
+                    <div style={{ padding: '15px', background: 'white', borderTop: '1px solid #e5e7eb', display: 'flex', gap: '10px' }}>
                         <input 
                             type="text" 
                             value={input} 
                             onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder="Ask about prices..."
-                            style={{ flex: 1, border: '1px solid #ddd', borderRadius: '20px', padding: '8px 15px', outline: 'none' }}
+                            onKeyDown={handleKeyDown}
+                            placeholder="Ask a question..."
+                            disabled={loading}
+                            style={{ flex: 1, border: '1px solid #d1d5db', borderRadius: '20px', padding: '10px 15px', outline: 'none', fontSize: '14px' }}
                         />
-                        <button onClick={handleSend} style={{ background: '#059669', color: 'white', border: 'none', borderRadius: '50%', width: '35px', height: '35px', marginLeft: '10px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <i className="fas fa-paper-plane" style={{ fontSize: '14px' }}></i>
-                        </button>
+                        <button onClick={handleSend} disabled={loading} style={{ background: loading ? '#93c5fd' : '#2563EB', color: 'white', border: 'none', borderRadius: '50%', width: '40px', height: '40px', cursor: loading ? 'default' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>➤</button>
                     </div>
                 </div>
             )}
 
-            {/* Floating Toggle Button with CUSTOM IMAGE */}
+            {/* --- 2. FLOATING TOGGLE BUTTON --- */}
             <button 
                 onClick={() => setIsOpen(!isOpen)} 
                 style={{
                     width: '60px',
                     height: '60px',
                     borderRadius: '50%',
-                    background: '#059669', // Background color if image has transparency
+                    background: '#2563EB',
                     border: 'none',
-                    boxShadow: '0 4px 10px rgba(0,0,0,0.3)',
+                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.4)',
                     cursor: 'pointer',
-                    padding: 0, // Remove padding to fit image
-                    overflow: 'hidden',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    overflow: 'hidden', // Keeps the image round
+                    padding: 0 
                 }}
             >
                 {isOpen ? (
-                    <i className="fas fa-times" style={{ color: 'white', fontSize: '24px' }}></i>
+                    <span style={{ color: 'white', fontSize: '30px', lineHeight: '1' }}>×</span>
                 ) : (
-                    // MAIN LOGO IMAGE
+                    // YOUR LOGO CODE HERE
                     <img 
                         src="/static/content/ai_logo.jpg" 
                         alt="AI"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                        // Fallback to Robot Icon if image is missing
                         onError={(e) => {
-                            e.target.style.display='none';
-                            e.target.parentNode.innerHTML = '<i class="fas fa-robot" style="color: white; font-size: 24px;"></i>';
+                            e.target.style.display = 'none';
+                            e.target.parentNode.innerHTML = '<span style="font-size: 28px; color: white;">💬</span>';
                         }}
                     />
                 )}
