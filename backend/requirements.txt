@@ -13,3 +13,5 @@ requests
 openpyxl
 xlsxwriter
 tensorflow
+google.generativeai
+waitress

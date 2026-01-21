@@ -127,7 +127,11 @@ except Exception as e:
 
 # B) Disease Detection
 disease_model = None
-device = torch.device("cuda" if torch.cuda.is_available() and PYTORCH_AVAILABLE else "cpu")
+if PYTORCH_AVAILABLE:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    device = "cpu"
+
 PLANT_CLASSES = [
     'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
     'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
