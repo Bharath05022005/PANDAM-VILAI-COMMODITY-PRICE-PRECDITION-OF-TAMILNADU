@@ -48,41 +48,10 @@ const Home = () => {
                     </div>
                 </div>
             
-                <div className="feature-card">
-                    {/* Path: frontend/public/static/content/dashboard.jpg */}
-                    <img src="/static/content/dashboard.jpg" alt="Dashboard Image" style={{ width: '40%', borderRadius: '10px' }} />
-                    <div className="feature-icon"><i className="fas fa-tachometer-alt"></i></div>
-                    <div className="feature-content">
-                        <h3>Interactive Dashboard</h3>
-                        <p>Explore trends through dynamic charts, district-wise price comparisons, and visual future price projections.</p>
-                        <Link to="/dashboard" className="tab-button blue" style={{ textDecoration: 'none', display: 'inline-block', textAlign: 'center' }}>
-                            Open Dashboard <i className="fas fa-arrow-right"></i>
-                        </Link>
-                    </div>
-                </div>
+           
             </div>
 
-            {/* Mission Section */}
-            <div className="sub-tab-content1 active">
-                <h1><i className="fas fa-bullseye"></i> Our Mission</h1>
-                <p style={{ fontSize: 'large', textIndent: '30px', textAlign: 'justify' }}>
-                    To reduce market uncertainties and enhance decision-making in agricultural commerce through accurate price forecasting and comprehensive market analysis.
-                </p>
-                <div className="mission-stats">
-                    <div className="stat-item">
-                        <span className="stat-number">5+</span>
-                        <span className="stat-label">Weeks of Advanced Prediction</span>
-                    </div>
-                    <div className="stat-item">
-                        <span className="stat-number">25+</span>
-                        <span className="stat-label">Varieties Analyzed</span>
-                    </div>
-                    <div className="stat-item">
-                        <span className="stat-number">95%</span>
-                        <span className="stat-label">Accuracy Rate</span>
-                    </div>
-                </div>
-            </div>
+          
         </div>
     );
 };
