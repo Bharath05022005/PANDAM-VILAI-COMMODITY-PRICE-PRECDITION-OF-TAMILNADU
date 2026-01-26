@@ -127,33 +127,76 @@ except Exception as e:
 
 # B) Disease Detection
 disease_model = None
-DISEASE_CLASSES = []
 
-if TF_AVAILABLE:
-    try:
-        # 1. Load the Model
-        disease_model_path = os.path.join("models", "plant_disease_model.h5")
-        if os.path.exists(disease_model_path):
-            disease_model = load_model(disease_model_path)
-            print("Disease Detection Model Loaded Successfully.")
-        else:
-            print(f"Warning: Model file '{disease_model_path}' not found.")
+if PYTORCH_AVAILABLE:
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+else:
+    device = "cpu"
 
-        # 2. Load the Classes (Dynamic Loading)
-        classes_path = os.path.join("models", "classes.txt")
-        if os.path.exists(classes_path):
-            with open(classes_path, "r") as f:
-                DISEASE_CLASSES = ast.literal_eval(f.read())
-            print(f"Disease Classes Loaded: {len(DISEASE_CLASSES)} classes found.")
-        else:
-            print(f"Warning: Class file '{classes_path}' not found. Using empty list.")
+PLANT_CLASSES = [
+    'Apple___Apple_scab', 'Apple___Black_rot', 'Apple___Cedar_apple_rust', 'Apple___healthy',
+    'Blueberry___healthy', 'Cherry_(including_sour)___Powdery_mildew', 'Cherry_(including_sour)___healthy',
+    'Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot', 'Corn_(maize)___Common_rust_', 
+    'Corn_(maize)___Northern_Leaf_Blight', 'Corn_(maize)___healthy', 'Grape___Black_rot', 
+    'Grape___Esca_(Black_Measles)', 'Grape___Leaf_blight_(Isariopsis_Leaf_Spot)', 'Grape___healthy',
+    'Orange___Haunglongbing_(Citrus_greening)', 'Peach___Bacterial_spot', 'Peach___healthy',
+    'Pepper,_bell___Bacterial_spot', 'Pepper,_bell___healthy', 'Potato___Early_blight',
+    'Potato___Late_blight', 'Potato___healthy', 'Raspberry___healthy', 'Soybean___healthy',
+    'Squash___Powdery_mildew', 'Strawberry___Leaf_scorch', 'Strawberry___healthy',
+    'Tomato___Bacterial_spot', 'Tomato___Early_blight', 'Tomato___Late_blight', 'Tomato___Leaf_Mold',
+    'Tomato___Septoria_leaf_spot', 'Tomato___Spider_mites Two-spotted_spider_mite',
+    'Tomato___Target_Spot', 'Tomato___Tomato_Yellow_Leaf_Curl_Virus', 'Tomato___Tomato_mosaic_virus',
+    'Tomato___healthy'
+]
+TREATMENT_ADVICE = {
+     'Apple_scab': "Rake and destroy fallen leaves. Apply fungicides like Captan.",
+    'Black_rot': "Prune infected branches. Remove mummified fruit.",
+    'Cedar_apple_rust': "Remove nearby juniper galls. Apply fungicides in spring.",
+    'Powdery_mildew': "Apply Neem oil or Sulfur. Improve air circulation.",
+    'Cercospora_leaf_spot': "Rotate crops. Use resistant hybrids. Apply fungicide.",
+    'Common_rust': "Plant resistant varieties. Fungicides generally not needed.",
+    'Northern_Leaf_Blight': "Rotate crops. Manage residue. Use resistant corn.",
+    'Esca_(Black_Measles)': "Prune out infected wood. Protect pruning wounds.",
+    'Leaf_blight': "Apply fungicides. Improve air circulation by pruning.",
+    'Haunglongbing_(Citrus_greening)': "Remove infected trees immediately (no cure). Control psyllids.",
+    'Bacterial_spot': "Use copper sprays. Avoid overhead watering.",
+    'Early_blight': "Mulch soil. Remove lower leaves. Apply Chlorothalonil.",
+    'Late_blight': "URGENT: Remove infected plants immediately. Apply Copper fungicide.",
+    'Leaf_Mold': "Reduce humidity. Improve ventilation.",
+    'Septoria_leaf_spot': "Remove lower leaves. Keep leaves dry.",
+    'Spider_mites': "Apply Neem oil or insecticidal soap.",
+    'Target_Spot': "Remove infected leaves. Apply fungicide.",
+    'Tomato_Yellow_Leaf_Curl_Virus': "Control whiteflies. Remove infected plants.",
+    'Tomato_mosaic_virus': "Disinfect tools. Wash hands. Remove infected plants.",
+    'Leaf_scorch': "Remove infected leaves. Water properly.",
+    'healthy': "Plant looks healthy! Continue regular care."
+}
 
-    except Exception as e:
-        print(f"Error loading Disease Model or Classes: {e}")
-        disease_model = None
-        DISEASE_CLASSES = []
+def load_pytorch_model():
+    global disease_model
+    if not PYTORCH_AVAILABLE: return
+    pth_path = os.path.join("models", "plantDisease-resnet34.pth")
+    if os.path.exists(pth_path):
+        try:
+            disease_model = models.resnet34(pretrained=False)
+            num_ftrs = disease_model.fc.in_features
+            disease_model.fc = nn.Linear(num_ftrs, len(PLANT_CLASSES))
+            disease_model.load_state_dict(torch.load(pth_path, map_location=device))
+            disease_model = disease_model.to(device)
+            disease_model.eval()
+            print("✅ PyTorch Disease Model Loaded.")
+        except Exception as e:
+            print(f"❌ Error loading .pth file: {e}")
 
-# C) Historical Data for Dashboard
+load_pytorch_model()
+if PYTORCH_AVAILABLE:
+    data_transform = transforms.Compose([
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
+    ])
+
+# C) Historical Data
 try:
     df_hist = pd.read_csv(r'filtered_apr2024_to_2025.csv')
     df_hist['Arrival_Date'] = pd.to_datetime(df_hist['Arrival_Date'])
@@ -254,64 +297,14 @@ def chat_assistant():
         return jsonify({"reply": response.text})
 
     except Exception as e:
-        print(f"Chat Error: {e}")
-        return jsonify({"reply": "I encountered an error reading the data charts."}), 500
+        print(f"❌ Gemini Error: {e}")
+        return jsonify({"reply": "I encountered an error connecting to Google Gemini. Please check the backend logs."})
 
-# --- 8. DASH DASHBOARD ---
-dash_app = dash.Dash(__name__, server=app, url_base_pathname='/dashboard/', external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-dash_app.layout = dbc.Container([
-    html.H1("Commodity Price Dashboard", style={'textAlign': 'center', 'marginTop': '20px'}),
-    html.Br(),
-    dbc.Row([
-        dbc.Col([
-            html.Label("Select Commodity"),
-            dcc.Dropdown(
-                id='commodity-dropdown',
-                options=[{'label': c, 'value': c} for c in df_hist['Commodity'].unique()] if not df_hist.empty else [],
-                value=df_hist['Commodity'].unique()[0] if not df_hist.empty else None,
-                clearable=False
-            )
-        ], width=6),
-        dbc.Col([
-            html.Label("Select District"),
-            dcc.Dropdown(
-                id='district-dropdown',
-                options=[{'label': d, 'value': d} for d in df_hist['District'].unique()] if not df_hist.empty else [],
-                value=df_hist['District'].unique()[0] if not df_hist.empty else None,
-                clearable=False
-            )
-        ], width=6)
-    ]),
-    html.Br(),
-    dbc.Row([dbc.Col(dcc.Graph(id='price-chart'), width=12)]),
-    html.Br(),
-    dbc.Row([
-        dbc.Col(dcc.Graph(id='min-max-scatter'), width=6),
-        dbc.Col(dcc.Graph(id='avg-price-bar'), width=6)
-    ])
-], fluid=True)
 
-@dash_app.callback(
-    [Output('price-chart', 'figure'),
-     Output('min-max-scatter', 'figure'),
-     Output('avg-price-bar', 'figure')],
-    [Input('commodity-dropdown', 'value'),
-     Input('district-dropdown', 'value')]
-)
-def update_dashboard(selected_commodity, selected_district):
-    if df_hist.empty or not selected_commodity:
-        return {}, {}, {}
-    
-    filtered = df_hist[(df_hist['Commodity'] == selected_commodity) & (df_hist['District'] == selected_district)]
-    
-    fig1 = px.line(filtered, x='Arrival_Date', y='Modal_Price', title=f'{selected_commodity} Prices in {selected_district}')
-    fig2 = px.scatter(filtered, x='Min_Price', y='Max_Price', title='Min Price vs Max Price')
-    district_comp = df_hist[df_hist['Commodity'] == selected_commodity].groupby('District')['Modal_Price'].mean().reset_index()
-    fig3 = px.bar(district_comp.sort_values('Modal_Price', ascending=False).head(10), x='District', y='Modal_Price', title='Top Districts by Price')
-    
-    return fig1, fig2, fig3
-
-# --- 9. RUN SERVER ---
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    from waitress import serve
+    print("✅ Server running on http://0.0.0.0:5000")
+
+    serve(app, host='0.0.0.0', port=5000, threads=6)
+
