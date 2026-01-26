@@ -16,17 +16,17 @@ import google.generativeai as genai
 
 # ⚠️ PASTE YOUR GOOGLE API KEY HERE
 # Get one free at: https://aistudio.google.com/app/apikey
-os.environ["GEMINI_API_KEY"] = "AIzaSyC5ptr58Kfd4COdHhJjRPRa-ybp2enFDO4"
+os.environ["API_KEY"] = "AIzaSyBAZDElUPocXqpggHt80jDfkbNSrLcBn2A"
 
 # Global model variable
 model = None
 
 def initialize_gemini():
     global model
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get("API_KEY")
     
     if not api_key or "PASTE_YOUR" in api_key:
-        print("⚠️ Gemini API Key not set. Chat will be in Offline Mode.")
+        print("⚠️  API Key not set. Chat will be in Offline Mode.")
         return
 
     try:
