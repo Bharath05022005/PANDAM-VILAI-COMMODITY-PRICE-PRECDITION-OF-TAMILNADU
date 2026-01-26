@@ -6,7 +6,6 @@ import axios from 'axios';
 import Home from './components/Home';
 import Insight from './components/Insight';
 import Prediction from './components/Prediction';
-import Download from './components/Download';
 import Login from './components/Login';
 import DiseaseDetection from './components/DiseaseDetection';
 import ChatAssistant from './components/ChatAssistant';
@@ -65,14 +64,9 @@ function App() {
             <i className="fas fa-chart-bar"></i> Prediction
           </NavLink>
           <NavLink to="/disease" className={({ isActive }) => isActive ? "tab-button active" : "tab-button"}>
-            <i className="fas fa-leaf"></i> Disease
+            <i className="fas fa-leaf"></i> Disease Detection
           </NavLink>
-          <NavLink to="/dashboard" className={({ isActive }) => isActive ? "tab-button active" : "tab-button"}>
-            <i className="fas fa-tachometer-alt"></i> Dashboard
-          </NavLink>
-          <NavLink to="/download" className={({ isActive }) => isActive ? "tab-button active" : "tab-button"}>
-            <i className="fas fa-download"></i> Download
-          </NavLink>
+
 
           <h2 style={{ margin: 0, textAlign: 'center', flexGrow: 1, color: 'white' }}>PANDAM VILAI</h2>
 
@@ -119,8 +113,7 @@ function App() {
             <Route path="/insight" element={<Insight />} />
             <Route path="/prediction" element={<Prediction />} />
             <Route path="/disease" element={<DiseaseDetection />} />
-            <Route path="/dashboard" element={<DashboardProxy />} />
-            <Route path="/download" element={<Download />} />
+          
             
             {/* Login Route: Redirects to Home if already logged in */}
             <Route 
